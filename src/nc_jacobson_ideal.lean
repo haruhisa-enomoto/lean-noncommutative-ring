@@ -10,91 +10,101 @@ import tactic.noncomm_ring
 /-!
 # Noncommutative Jacobson radical and local ring
 
-Let `R` be a (possibly noncommutative) ring. The *Jacobson radical* of `R` is defined to be the intersection of all maximal *left* ideals of `R`, which coincides with that of all maximal *right* ideals, so it is a two-sided ideal.
+In this file, we define the Jacobson radical of a ring and local rings
+in the noncommutative setting, and prove their basic properties.
 
-`R` is called a *nc-local ring* if it has a unique maximal *left* ideal. This conditions is equivalent to that it has a unique maximal *right* ideal.
-(Note that this is simply called a *local ring* in the setting of noncommutative ring, but we call it *nc-local* to avoid confusion.)
+Let `R` be a (possibly noncommutative) ring. The *Jacobson radical* of `R` is defined
+to be the intersection of all maximal *left* ideals of `R`, which coincides with that of
+all maximal *right* ideals, so it is a two-sided ideal.
+
+`R` is called an *nc-local ring* if it has a unique maximal *left* ideal.
+This conditions is equivalent to that it has a unique maximal *right* ideal.
+(Note that this is simply called a *local ring* in the noncommutative setting,
+but we call it *nc-local* to avoid confusion.)
 
 ## Main definitions
 
-* `nc_jacobson R : ideal R`: the Jacobson radical of a ring `R`, defined by the intersection of all maximal *left* ideals.
+* `nc_jacobson R : ideal R`: the Jacobson radical of a ring `R`, that is,
+  the intersection of all maximal *left* ideals.
 
-* `nc_local R : Prop`: the assertion that `R` has a unique maximal *left* ideal.
+* `nc_local R : Prop`: the proposition that `R` is an nc-local ring, that is,
+  it has a unique maximal *left* ideal.
 
 ## Main statements
 
-* `mem_nc_jacobson_tfae`: several equivalent conditions for an element in `R` to contained in `nc_jacobson R`.
+* `mem_nc_jacobson_tfae`: several equivalent conditions for an element in a ring
+  to be contained in the Jacobson radical.
 
-* `nc_jacobson_symm`: `nc_jacobson R` coincides with the intersection of all maximal *right* ideals, namely, `nc_jacobson Rᵐᵒᵖ`.
+* `nc_jacobson_symm`: the definition of the Jacobson radical is left-right symmetric.
 
-* `nc_local_tfae`: several equivalent conditions for `R` to be an nc-local ring.
+* `nc_local_tfae`: several equivalent conditions for a ring to be nc-local.
+
+* `nc_local_symm`: the definition of an nc-local ring is left-right symmetric.
 
 ## Implementation notes
 
-We have already the typeclass `ring_theory.ideal.local_ring.local_ring` for a nc-local (semi)ring.
-We use a different definition for a ring for the convenience of the proof.
-`local_iff_nc_local` shows that `nc_local R` if and only if `R` is an instance of `local_ring`.
+We already have the typeclass `ring_theory.ideal.local_ring.local_ring`
+for an nc-local (semi)ring. We use a different definition for a ring to be nc-local
+for the convenience of the proof. `local_iff_nc_local` proves that `nc_local R` 
+if and only if `R` is an instance of `local_ring` (if `R` is a ring).
 -/
 
-
 universe u
-
 open mul_opposite
 
 section monoid
-
+variables {M : Type u} {a : M} {b : M} [monoid M]
 /-! ### Some lemmas on inverses in monoids -/
 
-variables {M : Type u} {a : M} {b : M} [monoid M]
+lemma is_unit_op_of_is_unit : is_unit a → is_unit (op a) :=
+λ ⟨⟨_, _, hab, hba⟩, rfl⟩, ⟨⟨_, _, by rw [←op_mul, ←op_one, hba],
+  by rw [←op_mul, ←op_one, hab]⟩, rfl⟩
 
-lemma op_is_unit_of_is_unit : is_unit a → is_unit (op a) :=
-λ ⟨⟨_, _, hab, hba⟩, rfl⟩, ⟨⟨_, _, by { rw [←op_mul, ←op_one, hba] },
-  by { rw [←op_mul, ←op_one, hab] }⟩, rfl⟩
+lemma is_unit_unop_of_is_unit {x : Mᵐᵒᵖ} : is_unit x → is_unit (unop x) :=
+λ ⟨⟨_, _, hxa, hax⟩, rfl⟩, ⟨⟨_, _, by rw [←unop_mul, ←unop_one, hax],
+  by rw [←unop_mul, ←unop_one, hxa]⟩, rfl⟩
 
-lemma unop_is_unit_of_is_unit {x : Mᵐᵒᵖ} : is_unit x → is_unit (unop x) :=
-λ ⟨⟨_, _, hxa, hax⟩, rfl⟩, ⟨⟨_, _, by { rw [←unop_mul, ←unop_one, hax] },
-  by { rw [←unop_mul, ←unop_one, hxa] }⟩, rfl⟩
+lemma is_unit_op_iff_is_unit {a : M} : is_unit (op a) ↔ is_unit a :=
+⟨λ h, unop_op a ▸ is_unit_unop_of_is_unit h, is_unit_op_of_is_unit⟩
 
-lemma op_is_unit {a : M} : is_unit (op a) ↔ is_unit a :=
-⟨λ h, (unop_op a) ▸ unop_is_unit_of_is_unit h, op_is_unit_of_is_unit⟩
-
-lemma unop_is_unit {x : Mᵐᵒᵖ} : is_unit (unop x) ↔ is_unit x :=
-⟨λ h, (op_unop x) ▸ op_is_unit_of_is_unit h, unop_is_unit_of_is_unit⟩
+lemma is_unit_unop_iff_is_unit {x : Mᵐᵒᵖ} : is_unit (unop x) ↔ is_unit x :=
+⟨λ h, op_unop x ▸ is_unit_op_of_is_unit h, is_unit_unop_of_is_unit⟩
 
 lemma is_unit_iff_has_two_sided_inv :
   is_unit a ↔ ∃ x : M, a * x = 1 ∧ x * a = 1 :=
-⟨λ ⟨⟨a, x, hax, hxa⟩, rfl⟩, ⟨x, hax, hxa⟩,
-  λ ⟨x, hax, hxa⟩, ⟨⟨a, x, hax, hxa⟩, rfl⟩⟩
+⟨λ ⟨⟨a, x, hax, hxa⟩, rfl⟩, ⟨x, hax, hxa⟩, λ ⟨x, hax, hxa⟩, ⟨⟨a, x, hax, hxa⟩, rfl⟩⟩
 
-
-/-- An element `a : M` of a monoid has a left inverse if there is some `x : M` satisfying `x * a = 1`. -/
+/-- An element `a : M` of a monoid has a left inverse
+if there is some `x : M` satisfying `x * a = 1`. -/
 def has_left_inv (a : M) : Prop := ∃ x : M, x * a = 1
 
-/-- An element `a : M` of a monoid has a right inverse if there is some `x : M` satisfying `a * x = 1`. -/
+/-- An element `a : M` of a monoid has a right inverse
+if there is some `x : M` satisfying `a * x = 1`. -/
 def has_right_inv (a : M) : Prop := ∃ x : M, a * x = 1
 
-/-- An element of a monoid is a unit if and only if it has both a left inverse and a right inverse. -/
+/-- An element of a monoid is a unit
+if and only if it has both a left inverse and a right inverse. -/
 theorem is_unit_iff_has_left_inv_right_inv :
-  (is_unit a) ↔ (has_left_inv a) ∧ (has_right_inv a) :=
+  is_unit a ↔ has_left_inv a ∧ has_right_inv a :=
 ⟨λ h, ⟨h.exists_left_inv, h.exists_right_inv⟩,
-  λ ⟨⟨x, hxa⟩, ⟨y, hay⟩⟩, ⟨⟨a, x,
-  by { convert hay, rw [←mul_one x, ←hay, ←mul_assoc, hxa, one_mul] }, hxa⟩, rfl⟩⟩
+  λ ⟨⟨x, hxa⟩, ⟨y, hay⟩⟩, ⟨⟨a, x, by { convert hay,
+  rw [←mul_one x, ←hay, ←mul_assoc, hxa, one_mul] }, hxa⟩, rfl⟩⟩
 
-/-- An element of a monoid is a unit if it has a left inverse which also has a left inverse. -/
+/-- An element of a monoid is a unit
+if it has a left inverse which also has a left inverse. -/
 theorem is_unit_of_has_left_inv_of_has_left_inv :
-  (b * a = 1) → (has_left_inv b) → is_unit a :=
-λ hba ⟨c, hcb⟩, ⟨⟨a, b,
-  by { convert hcb, rw [←one_mul a, ←hcb, mul_assoc, hba, mul_one] }, hba⟩, rfl⟩
+  b * a = 1 → has_left_inv b → is_unit a :=
+λ hba ⟨c, hcb⟩, ⟨⟨a, b, by { convert hcb,
+  rw [←one_mul a, ←hcb, mul_assoc, hba, mul_one] }, hba⟩, rfl⟩
 
 end monoid
 
 section ring
-
-/-! ### Some lemmas on inverses in rings -/
 variables {R : Type u} {a : R} {b : R} [ring R]
+/-! ### Some lemmas on inverses in rings -/
 
-lemma one_add_mul_has_left_inv_swap :
-  (has_left_inv (1 + a * b)) → (has_left_inv (1 + b * a)) :=
+lemma has_left_inv_one_mul_swap :
+  has_left_inv (1 + a * b) → has_left_inv (1 + b * a) :=
 begin
   rintro ⟨u, hu⟩,
   existsi 1 - b * u * a,
@@ -103,22 +113,22 @@ begin
     ... = 1 : by rw [hu ,mul_one, add_sub_cancel],
 end
 
-lemma one_add_mul_has_right_inv_swap :
-  (has_right_inv (1 + a * b)) → (has_right_inv (1 + b * a)) :=
+lemma has_right_inv_one_add_mul_swap :
+  has_right_inv (1 + a * b) → has_right_inv (1 + b * a) :=
 begin
   rintro ⟨u, hu⟩,
   existsi 1 - b * u * a,
-  calc (1 + b * a) * (1 - b*u*a)
+  calc (1 + b * a) * (1 - b * u * a)
       = 1 + b * a - b * ((1 + a * b ) * u) * a : by noncomm_ring
   ... = 1 : by rw [hu ,mul_one, add_sub_cancel],
 end
 
-lemma one_add_mul_is_unit_swap :
-  (is_unit (1 + a * b)) → (is_unit (1 + b * a)) :=
+lemma is_unit_one_add_mul_swap :
+  is_unit (1 + a * b) → is_unit (1 + b * a) :=
 begin
   repeat {rw is_unit_iff_has_left_inv_right_inv},
   rintro ⟨h₁, h₂⟩,
-  exact ⟨one_add_mul_has_left_inv_swap h₁, one_add_mul_has_right_inv_swap h₂⟩,
+  exact ⟨has_left_inv_one_mul_swap h₁, has_right_inv_one_add_mul_swap h₂⟩,
 end
 
 end ring
@@ -126,66 +136,63 @@ end ring
 namespace ideal
 section nc_jacobson_radical
 variables {R : Type u} [ring R]
-
 /-! ### Jacobson radical of a ring -/
 
 /--
-For a semiring `R`, the Jacobson radical of `R` is the intersection of
-all maximal left ideals of of `R`.
+For a semiring `R`, `nc_jacobson R` is the Jacobson radical of `R`, that is,
+the intersection of all maximal left ideals of of `R`. Note that we use left ideals.
 -/
 def nc_jacobson (R : Type u) [semiring R] : ideal R :=
-Inf {J : ideal R | J.is_maximal }
+Inf {I : ideal R | I.is_maximal }
 
 lemma has_left_inv_iff_span_top {x : R} :
-  (has_left_inv x) ↔ (span ({x} : set R)) = ⊤ :=
+  has_left_inv x ↔ span ({x} : set R) = ⊤ :=
 begin
   split,
   { rintro ⟨a, hax⟩,
     apply eq_top_of_unit_mem _ x a _ hax,
     apply submodule.mem_span_singleton_self },
   { intro h,
-    have : (1 : R) ∈ span ({x} : set R),
-      { rw h, exact submodule.mem_top },
+    have : (1 : R) ∈ span ({x} : set R) := by { rw h, exact submodule.mem_top },
     exact (mem_span_singleton').mp this },
 end
 
 lemma not_has_left_inv_iff_mem_maximal {x : R} :
-  ¬has_left_inv x ↔ ∃ M : ideal R, M.is_maximal ∧ x ∈ M :=
+  ¬has_left_inv x ↔ ∃ I : ideal R, I.is_maximal ∧ x ∈ I :=
 begin
   rw has_left_inv_iff_span_top,
   split,
   { intro hx,
-    obtain ⟨M, hMmax, hxM⟩ := exists_le_maximal _ hx,
-    exact ⟨M, hMmax, by {apply hxM, apply submodule.mem_span_singleton_self}⟩ },
-  { rintro ⟨M, hMmax, hxM⟩ hcontra,
-    refine hMmax.ne_top _,
-    rwa [eq_top_iff, ← hcontra, span_le,
-      set.singleton_subset_iff] },
+    obtain ⟨I, hImax, hxI⟩ := exists_le_maximal _ hx,
+    exact ⟨I, hImax, by {apply hxI, apply submodule.mem_span_singleton_self}⟩ },
+  { rintro ⟨I, hImax, hxI⟩ hcontra,
+    refine hImax.ne_top _,
+    rwa [eq_top_iff, ←hcontra, span_le, set.singleton_subset_iff] },
 end
 
-lemma one_add_has_left_inv_of_mem_jacobson {x : R} :
-  (x ∈ nc_jacobson R) → has_left_inv (1 + x):=
+lemma has_left_inv_one_add_of_mem_jacobson {x : R} :
+  x ∈ nc_jacobson R → has_left_inv (1 + x):=
 begin
   contrapose,
   rw not_has_left_inv_iff_mem_maximal,
-  rintro ⟨M, hMmax, hxxM⟩ hx,
-  refine hMmax.ne_top _,
+  rintro ⟨I, hImax, hxxI⟩ hx,
+  refine hImax.ne_top _,
   rw eq_top_iff_one,
-  have hxM : x ∈ M := by { rw [nc_jacobson, mem_Inf] at hx, apply hx hMmax },
-  exact (add_mem_cancel_right hxM).mp hxxM,
+  have hxI : x ∈ I := by { rw [nc_jacobson, mem_Inf] at hx, apply hx hImax },
+  exact (add_mem_cancel_right hxI).mp hxxI,
 end
 
-lemma one_add_mul_self_mem_maximal_of_not_mem_maximal {x : R} {M : ideal R} :
-M.is_maximal → x ∉ M → ∃ a : R, 1 + a * x ∈ M :=
+lemma one_add_mul_self_mem_maximal_of_not_mem_maximal {x : R} {I : ideal R} :
+  I.is_maximal → x ∉ I → ∃ a : R, 1 + a * x ∈ I :=
 begin
-  rintro hMmax hxM,
-  have : (1 : R) ∈ M ⊔ span {x},
-  { rw is_maximal_iff at hMmax,
-    apply hMmax.2 _ _ le_sup_left hxM,
+  intros hImax hxI,
+  have : (1 : R) ∈ I ⊔ span {x},
+  { rw is_maximal_iff at hImax,
+    apply hImax.2 _ _ le_sup_left hxI,
     apply mem_sup_right,
     apply submodule.mem_span_singleton_self },
   rw submodule.mem_sup at this,
-  obtain ⟨m, hmM, y, hy, hmy⟩ := this,
+  obtain ⟨m, hmI, y, hy, hmy⟩ := this,
   rw mem_span_singleton' at hy,
   obtain ⟨a, rfl⟩ := hy,
   existsi -a,
@@ -195,7 +202,7 @@ end
 /--
 The following are equivalent for an element `x` in a ring `R`.
 
-0. `x` is in the Jacobson radical of `R`, that is, contained in every mximal left ideals.
+0. `x` is in the Jacobson radical of `R`, that is, contained in every mximal left ideal.
 1. `1 + a * x` has a left inverse for any `a : R`.
 2. `1 + a * x` is a unit for any `a : R`.
 3. `1 + x * b` is a unit for any `b : R`.
@@ -206,10 +213,10 @@ theorem mem_nc_jacobson_tfae {R : Type u} [ring R] (x : R) : tfae [
   ∀ a : R, has_left_inv (1 + a * x),
   ∀ a : R, is_unit (1 + a * x),
   ∀ b : R, is_unit (1 + x * b),
-  ∀ (a b : R), is_unit (1 + a * x * b)] :=
+  ∀ a b : R, is_unit (1 + a * x * b)] :=
 begin
   tfae_have : 1 → 2,
-  { exact λ hx a, one_add_has_left_inv_of_mem_jacobson $
+  { exact λ hx a, has_left_inv_one_add_of_mem_jacobson $
     (nc_jacobson R).smul_mem' a hx },
   tfae_have : 2 → 3,
   { intros hx a,
@@ -221,7 +228,7 @@ begin
       ...  = 1 + ( -c * a * x) : by rw hc },
   tfae_have : 3 → 5,
   { intros hx _ _,
-    apply one_add_mul_is_unit_swap,
+    apply is_unit_one_add_mul_swap,
     rw ←mul_assoc,
     apply hx },
   tfae_have : 5 → 1,
@@ -229,14 +236,14 @@ begin
     by_contra hx,
     rw [nc_jacobson, submodule.mem_Inf] at hx,
     simp only [not_forall] at hx,
-    rcases hx with ⟨M, hMmax, hxM⟩,
-    refine hMmax.ne_top _,
-    obtain ⟨a, ha⟩ := one_add_mul_self_mem_maximal_of_not_mem_maximal hMmax hxM,
+    rcases hx with ⟨I, hImax, hxI⟩,
+    refine hImax.ne_top _,
+    obtain ⟨a, ha⟩ := one_add_mul_self_mem_maximal_of_not_mem_maximal hImax hxI,
     apply eq_top_of_is_unit_mem _ ha,
     specialize h a 1,
     rwa [mul_assoc, mul_one] at h },
   tfae_have : 3 ↔ 4,
-  { split; exact λ h b, one_add_mul_is_unit_swap (h b) },
+  { split; exact λ h b, is_unit_one_add_mul_swap (h b) },
   tfae_finish,
 end
 
@@ -246,18 +253,18 @@ the intersection of all maximal left ideals coincides with that of all maximal r
 We express this by using the opposite ring `Rᵐᵒᵖ`.
 -/
 theorem nc_jacobson_symm {x : R} :
-  (x ∈ nc_jacobson R) ↔ (op x ∈ nc_jacobson Rᵐᵒᵖ) :=
+  x ∈ nc_jacobson R ↔ op x ∈ nc_jacobson Rᵐᵒᵖ :=
 begin
   split,
   { intro hx,
     rw (mem_nc_jacobson_tfae $ op x).out 0 3,
     intro a,
-    rw [←unop_is_unit, unop_add, unop_one, unop_mul, unop_op],
+    rw [←is_unit_unop_iff_is_unit, unop_add, unop_one, unop_mul, unop_op],
     apply ((mem_nc_jacobson_tfae x).out 0 2).mp hx },
   { intro hx,
     rw (mem_nc_jacobson_tfae x).out 0 3,
     intro a,
-    rw [←op_is_unit, op_add, op_one, op_mul],
+    rw [←is_unit_op_iff_is_unit, op_add, op_one, op_mul],
     apply ((mem_nc_jacobson_tfae $ op x).out 0 2).mp hx },
 end
 
@@ -267,7 +274,8 @@ section nc_local_ring
 variables {R : Type u} [ring R]
 /-! ### Noncommutative local ring -/
 
-/-- A ring is a nc-local ring if it has a unique maximal left ideal. -/
+/-- A ring is an nc-local ring if it has a unique maximal left ideal.
+Note that we use left ideals. -/
 def nc_local (R : Type u) [ring R] : Prop :=
   (∃! I : ideal R, I.is_maximal)
 
@@ -275,16 +283,16 @@ lemma nc_local_iff_jacobson_is_maximal :
   nc_local R ↔ (nc_jacobson R).is_maximal :=
 begin
   split,
-  { rintro ⟨M, hMmax, hMuniq⟩,
-    convert hMmax,
-    have : {J : ideal R | J.is_maximal} = {M},
-    { rw set.eq_singleton_iff_unique_mem, exact ⟨hMmax, hMuniq⟩ },
+  { rintro ⟨I, hImax, hIuniq⟩,
+    convert hImax,
+    have : {J : ideal R | J.is_maximal} = {I},
+    { rw set.eq_singleton_iff_unique_mem, exact ⟨hImax, hIuniq⟩ },
     rw [nc_jacobson, this],
     exact Inf_singleton },
   { intro h,
     refine ⟨nc_jacobson R, h, _⟩,
-    intros M hMmax,
-    exact (eq_top_or_eq_of_coatom_le h.1 (Inf_le hMmax)).resolve_left hMmax.ne_top },
+    intros I hImax,
+    exact (eq_top_or_eq_of_coatom_le h.1 (Inf_le hImax)).resolve_left hImax.ne_top },
 end
 
 lemma is_jacobson_of_nc_local_of_is_maximal {J : ideal R} :
@@ -293,11 +301,11 @@ lemma is_jacobson_of_nc_local_of_is_maximal {J : ideal R} :
   ⟨I, hIuniq⟩).symm ▸ hIuniq.2 _ hJmax
 
 lemma nontrivial_of_nc_local : nc_local R → nontrivial R :=
-λ ⟨M, hM⟩, nontrivial_of_ne 0 1 $ λ h, (ne_top_iff_one M).mp hM.1.ne_top (h ▸ zero_mem M)
+λ ⟨I, hI⟩, nontrivial_of_ne 0 1 $ λ h, (ne_top_iff_one I).mp hI.1.ne_top (h ▸ zero_mem I)
 
-/-- In a local ring, an element with a left inverse is automatically a unit. -/
+/-- In an nc-local ring, an element with a left inverse is automatically a unit. -/
 lemma is_unit_of_nc_local_of_has_left_inv :
-  nc_local R → ∀ (a : R), has_left_inv a → is_unit a :=
+  nc_local R → ∀ a : R, has_left_inv a → is_unit a :=
 begin
   rintro h a ⟨x, hxa⟩,
   apply is_unit_of_has_left_inv_of_has_left_inv hxa,
@@ -305,17 +313,17 @@ begin
   suffices : is_unit (0 : R),
   { haveI := nontrivial_of_nc_local h,
     exact not_is_unit_zero this },
-  obtain ⟨M, hMmax, hxM⟩ := (not_has_left_inv_iff_mem_maximal).mp hx,
-  replace hxM : x ∈ nc_jacobson R := 
-    (is_jacobson_of_nc_local_of_is_maximal h hMmax) ▸ hxM,
-  replace hxM := ((mem_nc_jacobson_tfae x).out 0 3).mp hxM,
-  specialize hxM (-a),
-  rwa [mul_neg, hxa, add_right_neg] at hxM,
+  obtain ⟨I, hImax, hxI⟩ := (not_has_left_inv_iff_mem_maximal).mp hx,
+  replace hxI : x ∈ nc_jacobson R := 
+    (is_jacobson_of_nc_local_of_is_maximal h hImax) ▸ hxI,
+  replace hxI := ((mem_nc_jacobson_tfae x).out 0 3).mp hxI,
+  specialize hxI (-a),
+  rwa [mul_neg, hxa, add_right_neg] at hxI,
 end
 
 lemma nonunits_add_iff_is_unit_or_is_unit_one_sub_self :
   (∀ {a b : R}, a ∈ nonunits R → b ∈ nonunits R → a + b ∈ nonunits R) ↔
-  ∀ (a : R), is_unit a ∨ is_unit (1 - a) :=
+  ∀ a : R, is_unit a ∨ is_unit (1 - a) :=
 begin
   split,
   { intros h a,
@@ -339,7 +347,7 @@ end
 
 /--
 The following are equivalent for a non-zero ring `R`.
-0. `R` is a nc-local ring, that is, it has a unique maximal left ideal.
+0. `R` is an nc-local ring, that is, it has a unique maximal left ideal.
 1. The set of nonunits coincides with the Jacobson radical.
 2. For any `a : R`, either `a` or `1 - a` is unit.
 3. The set of nonunits are closed under additions.
@@ -354,24 +362,22 @@ begin
   { intros h a,
     rw or_iff_not_imp_left,
     intro ha,
-    replace ha : ¬has_left_inv a :=
-      ha ∘(is_unit_of_nc_local_of_has_left_inv h a),
+    replace ha : ¬has_left_inv a := ha ∘ (is_unit_of_nc_local_of_has_left_inv h a),
     rw not_has_left_inv_iff_mem_maximal at ha,
-    obtain ⟨M, hMmax, haM⟩ := ha,
-    replace haM : a ∈ nc_jacobson R := 
-      (is_jacobson_of_nc_local_of_is_maximal h hMmax) ▸ haM,
-    rw (mem_nc_jacobson_tfae a).out 0 2 at haM,
-    specialize haM (-1),
-    rwa [neg_mul, one_mul, ←sub_eq_add_neg] at haM },
+    obtain ⟨I, hImax, haI⟩ := ha,
+    replace haI : a ∈ nc_jacobson R := 
+      (is_jacobson_of_nc_local_of_is_maximal h hImax) ▸ haI,
+    rw (mem_nc_jacobson_tfae a).out 0 2 at haI,
+    specialize haI (-1),
+    rwa [neg_mul, one_mul, ←sub_eq_add_neg] at haI },
   tfae_have : 3 → 2,
   { intro h,
     apply subset_antisymm, swap,
-    { exact let ⟨_, hmax⟩ := exists_maximal R in
-      subset_trans (Inf_le hmax) (coe_subset_nonunits hmax.ne_top) },
+    { obtain ⟨_, hmax⟩ := exists_maximal R,
+      exact subset_trans (Inf_le hmax) (coe_subset_nonunits hmax.ne_top) },
     intros x hx,
     change x ∈ nc_jacobson R,
-    rw [mem_nonunits_iff, is_unit_iff_has_left_inv_right_inv,
-      not_and_distrib] at hx,
+    rw [mem_nonunits_iff, is_unit_iff_has_left_inv_right_inv, not_and_distrib] at hx,
     cases hx with hleft hright,
     { rw (mem_nc_jacobson_tfae x).out 0 2,
       intro a,
@@ -400,8 +406,7 @@ begin
     split,
     { rw [is_maximal_def, is_coatom],
       split,
-      { rw [ne_top_iff_one, ←set_like.mem_coe, ←h],
-        exact one_not_mem_nonunits },
+      { rw [ne_top_iff_one, ←set_like.mem_coe, ←h], exact one_not_mem_nonunits },
       intro I,
       contrapose,
       intro hI,
@@ -423,23 +428,27 @@ The definition of a local ring is left-right symmetric, that is,
 a ring has a unique maximal left ideal if and only if it has a unique maximal right ideal.
 We express this by using the opposite ring `Rᵐᵒᵖ`.
 -/
-theorem local_ring_symm [nontrivial R] : (nc_local R) ↔ (nc_local Rᵐᵒᵖ) :=
+theorem nc_local_symm [nontrivial R] : nc_local R ↔ nc_local Rᵐᵒᵖ :=
 begin
   split,
   { intro h,
     rw (nc_local_tfae Rᵐᵒᵖ).out 0 2,
     rw (nc_local_tfae R).out 0 2 at h,
     intro a,
-    rw [←@unop_is_unit _ _ a, ←@unop_is_unit _ _ (1 - a)],
+    rw [←@is_unit_unop_iff_is_unit _ _ a, ←@is_unit_unop_iff_is_unit _ _ (1 - a)],
     apply h },
   { intro h,
     rw (nc_local_tfae R).out 0 2,
     rw (nc_local_tfae Rᵐᵒᵖ).out 0 2 at h,
     intro a,
-    rw [←@op_is_unit _ _ a, ←@op_is_unit _ _ (1 - a)],
+    rw [←@is_unit_op_iff_is_unit _ _ a, ←@is_unit_op_iff_is_unit _ _ (1 - a)],
     apply h },
 end
 
+/--
+A ring `R` is an instance of `ring_theory.ideal.local_ring.local_ring`
+if and only if `nc_local R` holds.
+-/
 theorem local_iff_nc_local : (local_ring R) ↔ (nc_local R) :=
 begin
   split,
@@ -453,5 +462,3 @@ end
 
 end nc_local_ring
 end ideal
-
-#lint
