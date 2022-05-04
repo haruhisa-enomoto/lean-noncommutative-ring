@@ -56,6 +56,7 @@ section monoid
 variables {M : Type u} {a : M} {b : M} [monoid M]
 /-! ### Some lemmas on inverses in monoids -/
 
+
 lemma is_unit_op_of_is_unit : is_unit a → is_unit (op a) :=
 λ ⟨⟨_, _, hab, hba⟩, rfl⟩, ⟨⟨_, _, by rw [←op_mul, ←op_one, hba],
   by rw [←op_mul, ←op_one, hab]⟩, rfl⟩
@@ -110,7 +111,7 @@ begin
   existsi 1 - b * u * a,
   calc (1 - b * u * a) * (1 + b * a)
         = 1 + b * a - b * (u * (1 + a * b)) * a : by noncomm_ring
-    ... = 1 : by rw [hu ,mul_one, add_sub_cancel],
+    ... = 1 : by rw [hu, mul_one, add_sub_cancel],
 end
 
 lemma has_right_inv_one_add_mul_swap :
@@ -120,7 +121,7 @@ begin
   existsi 1 - b * u * a,
   calc (1 + b * a) * (1 - b * u * a)
       = 1 + b * a - b * ((1 + a * b ) * u) * a : by noncomm_ring
-  ... = 1 : by rw [hu ,mul_one, add_sub_cancel],
+  ... = 1 : by rw [hu, mul_one, add_sub_cancel],
 end
 
 lemma is_unit_one_add_mul_swap :
@@ -201,7 +202,6 @@ end
 
 /--
 The following are equivalent for an element `x` in a ring `R`.
-
 0. `x` is in the Jacobson radical of `R`, that is, contained in every mximal left ideal.
 1. `1 + a * x` has a left inverse for any `a : R`.
 2. `1 + a * x` is a unit for any `a : R`.
